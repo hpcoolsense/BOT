@@ -103,11 +103,20 @@ class PacificaClient:
         s_up = side.upper()
         side_str = "bid" if s_up in ("BUY", "BID", "LONG") else "ask"
         
-        # STOP MARKET: Solo trigger_price, SIN price.
+        # LÓGICA CORREGIDA:
+        # Pacifica exige 'price'. Calculamos un precio agresivo para simular Market Stop.
+        # Si es VENTA (Bid), ejecutamos a un precio MUY BAJO (ej. -10%) para asegurar venta inmediata tras el trigger.
+        # Si es COMPRA (Ask), ejecutamos a un precio MUY ALTO (ej. +10%).
+        if side_str == "bid": 
+            exec_px = stop_price * 0.90 
+        else: 
+            exec_px = stop_price * 1.10
+
         op_data = {
             "symbol": symbol.upper(),
             "amount": f"{base_qty:.8f}".rstrip("0").rstrip("."),
             "trigger_price": f"{stop_price:.2f}",
+            "price": f"{exec_px:.2f}",  # CAMPO OBLIGATORIO AÑADIDO
             "side": side_str,
             "tif": "GTC",
             "reduce_only": True,
