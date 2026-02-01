@@ -56,7 +56,6 @@ class LighterAPI:
         async def _do():
             c = await self._get_client()
             cfg = _token_cfg(symbol)
-            # snake_case arguments
             return await _maybe_call(c.create_market_order_if_slippage,
                 market_index=cfg["market_index"],
                 client_order_index=0,
@@ -74,14 +73,14 @@ class LighterAPI:
             cfg = _token_cfg(symbol)
             from lighter.signer_client import CreateOrderTxReq
             
-            # CORRECCIÓN: Argumentos en snake_case
+            # CORRECCIÓN: Argumentos en snake_case estricto
             req = CreateOrderTxReq(
                 market_index=cfg["market_index"],
                 client_order_index=int(time.time()*1000)%1000000,
                 base_amount=int(qty_base * 10**cfg["base_decimals"]),
                 price=int(price * 10**cfg["price_decimals"]),
                 is_ask=(side.upper() in ["SELL", "SHORT"]),
-                type=c.ORDER_TYPE_LIMIT,
+                order_type=c.ORDER_TYPE_LIMIT, # Nota: algunos SDK usan 'order_type', otros 'type'. Python suele ser 'order_type' en generated code.
                 time_in_force=c.ORDER_TIME_IN_FORCE_GOOD_TILL_TIME,
                 reduce_only=True,
                 trigger_price=0,
@@ -98,10 +97,9 @@ class LighterAPI:
             from lighter.signer_client import CreateOrderTxReq
             
             is_ask = (side.upper() in ["SELL", "SHORT"])
-            
-            # CORRECCIÓN: STOP_LOSS_LIMIT con trigger y precio agresivo
             exec_px = price * 0.95 if is_ask else price * 1.05
             
+            # CORRECCIÓN: Argumentos en snake_case estricto
             req = CreateOrderTxReq(
                 market_index=cfg["market_index"],
                 client_order_index=int(time.time()*1000)%1000000,
@@ -109,7 +107,7 @@ class LighterAPI:
                 price=int(exec_px * 10**cfg["price_decimals"]),
                 trigger_price=int(price * 10**cfg["price_decimals"]),
                 is_ask=is_ask,
-                type=c.ORDER_TYPE_STOP_LOSS_LIMIT,
+                order_type=c.ORDER_TYPE_STOP_LOSS_LIMIT, 
                 time_in_force=c.ORDER_TIME_IN_FORCE_GOOD_TILL_TIME,
                 reduce_only=True,
                 order_expiry=0
