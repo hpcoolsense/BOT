@@ -73,14 +73,14 @@ class LighterAPI:
             cfg = _token_cfg(symbol)
             from lighter.signer_client import CreateOrderTxReq
             
-            # CORRECCIÓN: Argumentos en snake_case estricto
+            # CORRECCIÓN: snake_case estricto
             req = CreateOrderTxReq(
                 market_index=cfg["market_index"],
                 client_order_index=int(time.time()*1000)%1000000,
                 base_amount=int(qty_base * 10**cfg["base_decimals"]),
                 price=int(price * 10**cfg["price_decimals"]),
                 is_ask=(side.upper() in ["SELL", "SHORT"]),
-                order_type=c.ORDER_TYPE_LIMIT, # Nota: algunos SDK usan 'order_type', otros 'type'. Python suele ser 'order_type' en generated code.
+                order_type=c.ORDER_TYPE_LIMIT, 
                 time_in_force=c.ORDER_TIME_IN_FORCE_GOOD_TILL_TIME,
                 reduce_only=True,
                 trigger_price=0,
@@ -99,7 +99,6 @@ class LighterAPI:
             is_ask = (side.upper() in ["SELL", "SHORT"])
             exec_px = price * 0.95 if is_ask else price * 1.05
             
-            # CORRECCIÓN: Argumentos en snake_case estricto
             req = CreateOrderTxReq(
                 market_index=cfg["market_index"],
                 client_order_index=int(time.time()*1000)%1000000,
