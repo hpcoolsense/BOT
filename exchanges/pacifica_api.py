@@ -5,8 +5,7 @@ import time
 import json
 import uuid
 import requests
-from typing import Dict, Any, Optional, List
-
+from typing import Dict, Any
 import base58
 from solders.keypair import Keypair
 from requests.adapters import HTTPAdapter
@@ -43,12 +42,10 @@ class PacificaClient:
         self.expiry_ms = int(os.getenv("PACIFICA_EXPIRY_MS", "30000"))
         self.slippage_percent = (os.getenv("PACIFICA_SLIPPAGE_PERCENT", "0.1")).strip()
         self.reduce_only = (os.getenv("PACIFICA_REDUCE_ONLY", "false")).lower() == "true"
-
         self._timeout = (1.5, 8.0)
         self._headers_market = {"Content-Type": "application/json", "type": "create_market_order"}
         self._headers_create = {"Content-Type": "application/json", "type": "create_order"}
 
-        if not self.account: raise RuntimeError("Pacifica: Faltan credenciales")
         try:
             self._agent_kp = Keypair.from_bytes(base58.b58decode(self.agent_pk_b58))
         except Exception as e:
@@ -103,20 +100,19 @@ class PacificaClient:
         s_up = side.upper()
         side_str = "bid" if s_up in ("BUY", "BID", "LONG") else "ask"
         
-        # LÓGICA CORREGIDA:
-        # Pacifica exige 'price'. Calculamos un precio agresivo para simular Market Stop.
-        # Si es VENTA (Bid), ejecutamos a un precio MUY BAJO (ej. -10%) para asegurar venta inmediata tras el trigger.
-        # Si es COMPRA (Ask), ejecutamos a un precio MUY ALTO (ej. +10%).
+        # --- SOLUCIÓN ERROR 'missing field price' ---
+        # Calculamos un precio de ejecución para satisfacer el requisito de la API,
+        # pero lo suficientemente lejos para asegurar que actúe como market una vez disparado.
         if side_str == "bid": 
-            exec_px = stop_price * 0.90 
+            exec_px = stop_price * 0.90  # Vender 10% abajo del trigger (ejecución inmediata)
         else: 
-            exec_px = stop_price * 1.10
+            exec_px = stop_price * 1.10  # Comprar 10% arriba
 
         op_data = {
             "symbol": symbol.upper(),
             "amount": f"{base_qty:.8f}".rstrip("0").rstrip("."),
             "trigger_price": f"{stop_price:.2f}",
-            "price": f"{exec_px:.2f}",  # CAMPO OBLIGATORIO AÑADIDO
+            "price": f"{exec_px:.2f}",  # <--- CAMPO AGREGADO QUE FALTABA
             "side": side_str,
             "tif": "GTC",
             "reduce_only": True,
