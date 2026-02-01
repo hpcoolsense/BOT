@@ -56,6 +56,7 @@ class LighterAPI:
         async def _do():
             c = await self._get_client()
             cfg = _token_cfg(symbol)
+            # snake_case arguments
             return await _maybe_call(c.create_market_order_if_slippage,
                 market_index=cfg["market_index"],
                 client_order_index=0,
@@ -64,7 +65,8 @@ class LighterAPI:
                 max_slippage=0.01,
                 is_ask=(side.upper() in ["SELL", "SHORT"])
             )
-        return {"accepted": True, "raw": self._run(_do())}
+        try: return {"accepted": True, "raw": self._run(_do())}
+        except Exception as e: return {"accepted": False}
 
     def place_limit(self, symbol: str, side: str, qty_base: float, price: float):
         async def _do():
@@ -72,18 +74,18 @@ class LighterAPI:
             cfg = _token_cfg(symbol)
             from lighter.signer_client import CreateOrderTxReq
             
-            # Pasar argumentos al constructor (PascalCase) para evitar error de missing arg
+            # CORRECCIÓN: Argumentos en snake_case
             req = CreateOrderTxReq(
-                MarketIndex=cfg["market_index"],
-                ClientOrderIndex=int(time.time()*1000)%1000000,
-                BaseAmount=int(qty_base * 10**cfg["base_decimals"]),
-                Price=int(price * 10**cfg["price_decimals"]),
-                IsAsk=(side.upper() in ["SELL", "SHORT"]),
-                Type=c.ORDER_TYPE_LIMIT,
-                TimeInForce=c.ORDER_TIME_IN_FORCE_GOOD_TILL_TIME,
-                ReduceOnly=True,
-                TriggerPrice=0,
-                OrderExpiry=0
+                market_index=cfg["market_index"],
+                client_order_index=int(time.time()*1000)%1000000,
+                base_amount=int(qty_base * 10**cfg["base_decimals"]),
+                price=int(price * 10**cfg["price_decimals"]),
+                is_ask=(side.upper() in ["SELL", "SHORT"]),
+                type=c.ORDER_TYPE_LIMIT,
+                time_in_force=c.ORDER_TIME_IN_FORCE_GOOD_TILL_TIME,
+                reduce_only=True,
+                trigger_price=0,
+                order_expiry=0
             )
             return await c.create_order(req)
         try: return {"accepted": True, "raw": self._run(_do())}
@@ -96,19 +98,21 @@ class LighterAPI:
             from lighter.signer_client import CreateOrderTxReq
             
             is_ask = (side.upper() in ["SELL", "SHORT"])
+            
+            # CORRECCIÓN: STOP_LOSS_LIMIT con trigger y precio agresivo
             exec_px = price * 0.95 if is_ask else price * 1.05
             
             req = CreateOrderTxReq(
-                MarketIndex=cfg["market_index"],
-                ClientOrderIndex=int(time.time()*1000)%1000000,
-                BaseAmount=int(qty_base * 10**cfg["base_decimals"]),
-                Price=int(exec_px * 10**cfg["price_decimals"]),
-                TriggerPrice=int(price * 10**cfg["price_decimals"]),
-                IsAsk=is_ask,
-                Type=c.ORDER_TYPE_STOP_LOSS_LIMIT,
-                TimeInForce=c.ORDER_TIME_IN_FORCE_GOOD_TILL_TIME,
-                ReduceOnly=True,
-                OrderExpiry=0
+                market_index=cfg["market_index"],
+                client_order_index=int(time.time()*1000)%1000000,
+                base_amount=int(qty_base * 10**cfg["base_decimals"]),
+                price=int(exec_px * 10**cfg["price_decimals"]),
+                trigger_price=int(price * 10**cfg["price_decimals"]),
+                is_ask=is_ask,
+                type=c.ORDER_TYPE_STOP_LOSS_LIMIT,
+                time_in_force=c.ORDER_TIME_IN_FORCE_GOOD_TILL_TIME,
+                reduce_only=True,
+                order_expiry=0
             )
             return await c.create_order(req)
         try: return {"accepted": True, "raw": self._run(_do())}
