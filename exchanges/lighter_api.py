@@ -34,10 +34,8 @@ class LighterAPI:
         self.priv_key = _require(_env("LIGHTER_API_KEY_PRIVATE_KEY"), "KEY")
         self.api_idx = int(_env("LIGHTER_API_KEY_INDEX", "0"))
         self.acc_idx = int(_env("LIGHTER_ACCOUNT_INDEX", "0"))
-        
         self._mod, self._SignerClient = _load_sdk()
         self._client = None
-        self._lock = threading.Lock()
 
     async def _get_client(self):
         if not self._client:
@@ -73,7 +71,7 @@ class LighterAPI:
             cfg = _token_cfg(symbol)
             from lighter.signer_client import CreateOrderTxReq
             
-            # CORRECCIÓN: snake_case estricto
+            # USO DE SNAKE_CASE ESTRICTO
             req = CreateOrderTxReq(
                 market_index=cfg["market_index"],
                 client_order_index=int(time.time()*1000)%1000000,
@@ -99,6 +97,7 @@ class LighterAPI:
             is_ask = (side.upper() in ["SELL", "SHORT"])
             exec_px = price * 0.95 if is_ask else price * 1.05
             
+            # USO DE SNAKE_CASE ESTRICTO
             req = CreateOrderTxReq(
                 market_index=cfg["market_index"],
                 client_order_index=int(time.time()*1000)%1000000,
