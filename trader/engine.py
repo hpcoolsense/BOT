@@ -266,24 +266,31 @@ class ArbEngine:
 
     def stop(self): self._stop.set()
 
+    # Pegar esto al final de trader/engine.py, reemplazando la función _loop existente
     def _loop(self):
         self.state = "running"
         base_sleep = max(0.0, LOOP_DELAY_MS / 1000.0)
         lbl = "Pac"
+
         while not self._stop.is_set():
             try:
+                # 1. Chequeo de Estado del Sistema
                 if not self._system_ready.is_set():
                     time.sleep(0.1); continue
 
+                # 2. Throttle entre pares
                 if (not DISABLE_GAP_THROTTLE) and self._last_pair_time_ms:
                     if (self._now_ms() - self._last_pair_time_ms) < float(GAP_BETWEEN_PAIRS_MS):
                         time.sleep(0.01); continue
 
+                # 3. Obtener Precios
                 pac_bid, pac_ask = self._best_bid_ask_safe(self.pac)
                 lig_bid, lig_ask = self._best_bid_ask_safe(self.lig)
+
                 if None in (pac_bid, pac_ask, lig_bid, lig_ask):
                     time.sleep(base_sleep); continue
 
+                # 4. Lógica de Apertura (SOLO SI NO HAY POSICIÓN)
                 if not self.open_active:
                     e_p2l = self._edge_p2l(pac_ask, lig_bid)
                     e_l2p = self._edge_l2p(lig_ask, pac_bid)
@@ -291,10 +298,16 @@ class ArbEngine:
                     if e_p2l and e_p2l >= EDGE_THRESHOLD:
                         self._open_once(f"{lbl}->Lig", pac_bid, pac_ask, lig_bid, lig_ask)
                         if NO_SLEEP_ON_SIGNAL: continue
+                    
                     elif e_l2p and e_l2p >= EDGE_THRESHOLD:
                         self._open_once(f"Lig->{lbl}", pac_bid, pac_ask, lig_bid, lig_ask)
                         if NO_SLEEP_ON_SIGNAL: continue
+                
+                # NOTA: Borramos toda la lógica de "FAIL-SAFE" antigua aquí porque
+                # ahora el Grid gestiona los cierres automáticamente.
+
                 time.sleep(base_sleep)
+
             except Exception:
                 traceback.print_exc()
                 time.sleep(1.0)
